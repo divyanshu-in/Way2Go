@@ -13,7 +13,7 @@ class MainViewModel(): ViewModel() {
 
     private val directionsMLD = MutableLiveData<RouteDirections>()
     val directionsLD: LiveData<RouteDirections> = directionsMLD
-    val repo = DirectionsApiService.invoke()
+    val repo = DirectionsApiService.buildApi()
 
     fun getDirectionsForCoords(start: String, end: String){
 

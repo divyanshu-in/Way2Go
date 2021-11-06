@@ -28,10 +28,15 @@ class LoginActivity: AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(LayoutInflater.from(this))
 
         binding.apply {
-            binding.button2.setOnClickListener {
+
+
+            button2.setOnClickListener {
                 if(tilPhone.visibility == View.VISIBLE){
                     tilPhone.invisible()
                     tilOtp.visible()
+
+                    tvOtpSent.visible()
+
                     sendOTP("+91" + tilPhone.editText?.text.toString())
                 }else{
                     verifyOTP(tilOtp.editText?.text.toString())

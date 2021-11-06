@@ -26,10 +26,11 @@ interface DirectionsApiService {
     ): Response<RouteDirections>
 
     companion object {
-        operator fun invoke(): DirectionsApiService {
+        fun buildApi(): DirectionsApiService {
 
 
-            val httpLoggingInterceptor = HttpLoggingInterceptor(HttpLoggingInterceptor.Logger.DEFAULT)
+            val httpLoggingInterceptor = HttpLoggingInterceptor()
+            httpLoggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
 
             val requestInterceptor = Interceptor { chain ->
 

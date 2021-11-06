@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -16,6 +17,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -28,10 +30,11 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.maps.*
-import com.google.android.gms.maps.model.JointType
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.*
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -39,21 +42,33 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import timber.log.Timber
+import com.google.android.gms.maps.model.MarkerOptions
 
-import com.google.android.gms.maps.SupportMapFragment
-
-
-
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.drawable.toBitmap
+import kotlin.math.atan2
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var binding: ActivityMainBinding
-    val roomId = FirebaseAuth.getInstance().currentUser?.phoneNumber!!
-    val database = FirebaseDatabase.getInstance("https://path-finder-801db-default-rtdb.asia-southeast1.firebasedatabase.app")
-    val ref = database.reference
-
+    private val roomId = FirebaseAuth.getInstance().currentUser?.phoneNumber!!
+    private val database = FirebaseDatabase.getInstance("https://path-finder-801db-default-rtdb.asia-southeast1.firebasedatabase.app")
+    private val ref = database.reference
+    private var polyline: Polyline? = null
     private lateinit var viewModel: MainViewModel
+    private var secondUsername: String = ""
+    private var marker1: Marker? = null
+    private var marker2: Marker? = null
+    private var isCameraAnimated = false
+
+    private var arrayOfMarkers = arrayListOf<Marker>()
+
+
+
 
     //location pair of this user and next user.
     private val locationPairLD = MutableLiveData<Pair<Coords?, Coords?>>()
@@ -63,7 +78,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
 
+
+
+
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        binding.cvClose.setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        }
+
+        binding.cvLogout.setOnClickListener {
+            FirebaseAuth.getInstance().signOut()
+            startActivity(Intent(this, SplashActivity::class.java))
+        }
 
         binding.button.setOnClickListener {
 
@@ -91,7 +119,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             if(it.first != null && it.second != null){
                 binding.includedProgressLayout.root.gone()
 
-//                viewModel.getDirectionsForCoords("23.2599", )
+
+
+
                 viewModel.getDirectionsForCoords("${it.first?.long.toString()}, ${it.first?.lat.toString()}", "${it.second?.long.toString()}, ${it.second?.lat.toString()}")
             }
         }
@@ -112,12 +142,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val popup = PopupWindow(popupBinding.root, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
 
 
+
+
         popupBinding.buttonFindPath.setOnClickListener {
 
             val firstUsername = popupBinding.etFirstUsername.text.toString()
             startUpdatingLocation(firstUsername)
             binding.includedProgressLayout.root.visible()
             binding.button.gone()
+            binding.cvClose.visible()
             popup.dismiss()
 //            createRoom(firstUsername)
         }
@@ -140,7 +173,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             if(isGranted){
                 turnGPSOn()
             }else{
-
+                Toast.makeText(this, "this permission is necessary!", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -160,19 +193,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             locationPairLD.postValue(Pair(Coords(location.latitude, location.longitude), locationPairLD.value?.second))
 
             updateLocOnFirebase(location)
-            Timber.e(location.toString())
+            Timber.e(location.toString() + "cur-userloc")
         }
 
         override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) {
-
+            Timber.e("""${extras.toString()} $status""")
         }
 
         override fun onProviderEnabled(provider: String) {
-
+            Timber.e(provider.toString())
         }
 
         override fun onProviderDisabled(provider: String) {
-
+            Timber.e(provider.toString())
         }
     }
 
@@ -222,27 +255,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     private fun startUpdatingLocation(firstUsername: String) {
-
+        secondUsername = firstUsername
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        val criteria = Criteria()
-        criteria.accuracy = Criteria.ACCURACY_FINE //default
-
-        criteria.isCostAllowed = false
+//        val criteria = Criteria()
+//        criteria.accuracy = Criteria.ACCURACY_FINE //default
+//
+//        criteria.isCostAllowed = false
 
         // get the best provider depending on the criteria
 
-        val provider = locationManager.getBestProvider(criteria, false)
+//        val provider = locationManager.getBestProvider(criteria, false)
 
         val locationListener = MyLocationListener()
 
-        locationManager.requestLocationUpdates(provider!!, 5000L, 0.0F, locationListener)
 
 
 
         val childRef = ref.child("+91$firstUsername")
 
+        childRef.child("lat").setValue(null)
+        childRef.child("long").setValue(null)
+
         childRef.addValueEventListener(userLocationListener)
+
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 0.0F, locationListener)
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 0.0F, locationListener)
 
 
     }
@@ -271,22 +309,77 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         polyLineOptions.visible(true)
         polyLineOptions.jointType(JointType.ROUND)
 
-
-        coordinates.forEach {
-            polyLineOptions.add(LatLng(it[1], it[0]))
+        arrayOfMarkers.forEach {
+            it.remove()
         }
 
-        mapFragment?.getMapAsync {
-            val polyline = it.addPolyline(polyLineOptions)
+
+
+        mapFragment?.getMapAsync { googleMap ->
+
+
+            coordinates.indices.forEach {
+
+                if(it > 0 && it < coordinates.size && coordinates.size > 1){
+                    val rotationDegrees = getAngleOfLine(LatLng(coordinates[it - 1][0], coordinates[it - 1][1]), LatLng(coordinates[it][0], coordinates[it][1]))
+                    val matrix = Matrix()
+                    matrix.postRotate(rotationDegrees.toFloat())
+
+                    val originalBitmap = bitmapDescriptorFromVector(this, R.drawable.ic_navigation)
+
+
+                    val position = LatLng((coordinates[it - 1][1] + coordinates[it][1])/2, (coordinates[it - 1][0] + coordinates[it][0])/2)
+
+                    val mArrowhead = googleMap.addMarker(
+                        MarkerOptions()
+                            .position(position)
+                            .icon(originalBitmap).rotation(rotationDegrees.toFloat())
+                    )
+
+                    mArrowhead?.let { it1 -> arrayOfMarkers.add(it1) }
+
+                }
+
+                polyLineOptions.add(LatLng(coordinates[it][1], coordinates[it][0]))
+            }
+
+
+            polyline?.let {
+                marker1?.remove()
+                marker2?.remove()
+                it.remove()
+            }
+            polyline = googleMap.addPolyline(polyLineOptions)
 
             val avgLat = (coordinates.first()[1] + coordinates.last()[1]) / 2
             val avgLong = (coordinates.first()[0] + coordinates.last()[0]) / 2
 
-            it.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(avgLat, avgLong), 20.0F))
+
+
+            marker1 = googleMap.addMarker(MarkerOptions().title("You").position(LatLng(coordinates.first()[1], coordinates.first()[0])))
+            marker2 = googleMap.addMarker(MarkerOptions().title(secondUsername).position(LatLng(coordinates.last()[1], coordinates.last()[0])))
+
+            if(!isCameraAnimated){
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(avgLat, avgLong), 20.0F))
+                isCameraAnimated = true
+            }
+
         }
 
 
     }
+
+    private fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
+        return ContextCompat.getDrawable(context, vectorResId)?.run {
+            setBounds(0, 0, intrinsicWidth, intrinsicHeight)
+            val bitmap = Bitmap.createBitmap(intrinsicWidth, intrinsicHeight, Bitmap.Config.ARGB_8888)
+            draw(Canvas(bitmap))
+            BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+    }
+
+
+    private fun getAngleOfLine(firstCoord: LatLng, secondCoord: LatLng)  = Math.toDegrees(atan2(firstCoord.latitude-secondCoord.latitude, firstCoord.longitude-secondCoord.longitude))
 
     override fun onMapReady(p0: GoogleMap) {
 
