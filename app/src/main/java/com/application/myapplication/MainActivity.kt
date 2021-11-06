@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Criteria
 import android.location.Location
 import android.location.LocationListener
@@ -20,12 +21,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModelProvider
 import com.application.myapplication.databinding.ActivityMainBinding
 import com.application.myapplication.databinding.EnterUsernamesPopupLayoutBinding
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.model.JointType
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -34,13 +40,20 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import timber.log.Timber
 
+import com.google.android.gms.maps.SupportMapFragment
 
-class MainActivity : AppCompatActivity() {
+
+
+
+
+class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var binding: ActivityMainBinding
     val roomId = FirebaseAuth.getInstance().currentUser?.phoneNumber!!
     val database = FirebaseDatabase.getInstance("https://path-finder-801db-default-rtdb.asia-southeast1.firebasedatabase.app")
     val ref = database.reference
+
+    private lateinit var viewModel: MainViewModel
 
     //location pair of this user and next user.
     private val locationPairLD = MutableLiveData<Pair<Coords?, Coords?>>()
@@ -49,6 +62,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
+
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
         binding.button.setOnClickListener {
 
@@ -62,9 +77,28 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+        val mapFragment = supportFragmentManager
+            .findFragmentById(binding.map.id) as SupportMapFragment?
+
+
+
+
+        mapFragment?.getMapAsync(this)
+
 
         locationPairLD.observe(this){
+            Timber.e(it.toString() )
+            if(it.first != null && it.second != null){
+                binding.includedProgressLayout.root.gone()
 
+//                viewModel.getDirectionsForCoords("23.2599", )
+                viewModel.getDirectionsForCoords("${it.first?.long.toString()}, ${it.first?.lat.toString()}", "${it.second?.long.toString()}, ${it.second?.lat.toString()}")
+            }
+        }
+
+        viewModel.directionsLD.observe(this){
+            Timber.e(it.toString() + "Dirs")
+            drawMapRoute(it.features?.get(0)?.geometry?.coordinates!!, mapFragment)
         }
 
 
@@ -79,8 +113,12 @@ class MainActivity : AppCompatActivity() {
 
 
         popupBinding.buttonFindPath.setOnClickListener {
+
             val firstUsername = popupBinding.etFirstUsername.text.toString()
             startUpdatingLocation(firstUsername)
+            binding.includedProgressLayout.root.visible()
+            binding.button.gone()
+            popup.dismiss()
 //            createRoom(firstUsername)
         }
 
@@ -225,6 +263,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun drawMapRoute(coordinates: List<List<Double>>, mapFragment: SupportMapFragment?) {
+
+        val polyLineOptions = PolylineOptions()
+        polyLineOptions.color(Color.parseColor("#4a89f3"))
+        polyLineOptions.width(25F)
+        polyLineOptions.visible(true)
+        polyLineOptions.jointType(JointType.ROUND)
+
+
+        coordinates.forEach {
+            polyLineOptions.add(LatLng(it[1], it[0]))
+        }
+
+        mapFragment?.getMapAsync {
+            val polyline = it.addPolyline(polyLineOptions)
+
+            val avgLat = (coordinates.first()[1] + coordinates.last()[1]) / 2
+            val avgLong = (coordinates.first()[0] + coordinates.last()[0]) / 2
+
+            it.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(avgLat, avgLong), 20.0F))
+        }
+
+
+    }
+
+    override fun onMapReady(p0: GoogleMap) {
+
+    }
 
 
 //    viewModel.getRouteDirection("77.4607,23.2571", "77.5247," +

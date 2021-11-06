@@ -5,6 +5,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 
 import retrofit2.Retrofit
@@ -26,6 +27,10 @@ interface DirectionsApiService {
 
     companion object {
         operator fun invoke(): DirectionsApiService {
+
+
+            val httpLoggingInterceptor = HttpLoggingInterceptor(HttpLoggingInterceptor.Logger.DEFAULT)
+
             val requestInterceptor = Interceptor { chain ->
 
                 val url = chain.request()
@@ -43,6 +48,7 @@ interface DirectionsApiService {
 
             val okHttpClient = OkHttpClient.Builder()
                 .addInterceptor(requestInterceptor)
+                .addInterceptor(httpLoggingInterceptor)
                 .build()
 
             val moshi = Moshi.Builder()
