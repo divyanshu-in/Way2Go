@@ -1,4 +1,4 @@
-package com.application.myapplication.directions
+package com.application.myapplication.models.directions
 
 
 import com.squareup.moshi.Json

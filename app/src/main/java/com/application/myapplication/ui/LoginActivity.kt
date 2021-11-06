@@ -1,4 +1,4 @@
-package com.application.myapplication
+package com.application.myapplication.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,7 +7,8 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.application.myapplication.databinding.ActivityLoginBinding
-import com.application.myapplication.databinding.ActivityMainBinding
+import com.application.myapplication.invisible
+import com.application.myapplication.visible
 import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*

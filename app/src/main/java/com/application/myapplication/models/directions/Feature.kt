@@ -1,7 +1,7 @@
 package com.mechanizo.android.customer.data.model.response.directions
 
 
-import com.application.myapplication.directions.MoreProperties
+import com.application.myapplication.models.directions.MoreProperties
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 

@@ -1,4 +1,4 @@
-package com.application.myapplication
+package com.application.myapplication.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -7,8 +7,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
-import android.location.Criteria
+import android.graphics.Matrix
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -24,8 +26,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
+import com.application.myapplication.R
 import com.application.myapplication.databinding.ActivityMainBinding
 import com.application.myapplication.databinding.EnterUsernamesPopupLayoutBinding
+import com.application.myapplication.gone
+import com.application.myapplication.models.Coords
+import com.application.myapplication.showPopupDimBehind
+import com.application.myapplication.visible
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
@@ -42,13 +49,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import timber.log.Timber
-import com.google.android.gms.maps.model.MarkerOptions
-
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Matrix
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.atan2
 
 
@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var marker1: Marker? = null
     private var marker2: Marker? = null
     private var isCameraAnimated = false
+//    private lateinit var tts: TextToSpeech
 
     private var arrayOfMarkers = arrayListOf<Marker>()
 
@@ -75,6 +76,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+//        tts = TextToSpeech(this, this)
 
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
 
@@ -136,6 +139,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val roundedDistance = "%.${2}f".format(it.distance?.div(1000)).toDouble()
 
                 binding.tvDist.text = roundedDistance.toString() + "Km"
+
+
+
             }
 
 
@@ -146,6 +152,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
+    private fun speakOut(text: String) {
+
+//        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null,"")
+    }
 
 
     private fun showPopup(){
@@ -404,9 +414,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
-//    viewModel.getRouteDirection("77.4607,23.2571", "77.5247," +
-//    "23" +
-//    ".2512")
+//    override fun onInit(status: Int) {
+//
+//        if (status == TextToSpeech.SUCCESS) {
+//            // set US English as language for tts
+//            val result = tts.setLanguage(Locale.US)
+//
+//            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+//
+//            } else {
+//
+//            }
+//
+//        } else {
+//            Timber.e("init failed")
+//        }
+//
+//    }
+
 
 
 

@@ -1,9 +1,10 @@
-package com.application.myapplication
+package com.application.myapplication.ui
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.application.myapplication.DirectionsApiService
 import com.mechanizo.android.customer.data.model.response.directions.RouteDirections
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
