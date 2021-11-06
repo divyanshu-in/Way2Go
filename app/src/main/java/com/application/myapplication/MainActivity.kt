@@ -126,14 +126,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-        viewModel.directionsLD.observe(this){
-            Timber.e(it.toString() + "Dirs")
-            drawMapRoute(it.features?.get(0)?.geometry?.coordinates!!, mapFragment)
+        viewModel.directionsLD.observe(this){ routeDirections ->
+            Timber.e(routeDirections.toString() + "Dirs")
+            drawMapRoute(routeDirections.features?.get(0)?.geometry?.coordinates!!, mapFragment)
+
+            routeDirections.features.firstOrNull()?.properties?.summary?.let{
+                binding.llDistance.visible()
+
+                val roundedDistance = "%.${2}f".format(it.distance?.div(1000)).toDouble()
+
+                binding.tvDist.text = roundedDistance.toString() + "Km"
+            }
+
+
         }
 
 
         setContentView(binding.root)
     }
+
+
 
 
     private fun showPopup(){
@@ -317,11 +329,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         mapFragment?.getMapAsync { googleMap ->
 
-
             coordinates.indices.forEach {
 
                 if(it > 0 && it < coordinates.size && coordinates.size > 1){
-                    val rotationDegrees = getAngleOfLine(LatLng(coordinates[it - 1][0], coordinates[it - 1][1]), LatLng(coordinates[it][0], coordinates[it][1]))
+                    val firstLatLng = LatLng(coordinates[it - 1][0], coordinates[it - 1][1])
+                    val secondLatLng = LatLng(coordinates[it][0], coordinates[it][1])
+                    val rotationDegrees = getAngleOfLine(firstLatLng, secondLatLng)
+
+
+
+
+
                     val matrix = Matrix()
                     matrix.postRotate(rotationDegrees.toFloat())
 
@@ -379,7 +397,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
-    private fun getAngleOfLine(firstCoord: LatLng, secondCoord: LatLng)  = Math.toDegrees(atan2(firstCoord.latitude-secondCoord.latitude, firstCoord.longitude-secondCoord.longitude))
+    private fun getAngleOfLine(firstCoord: LatLng, secondCoord: LatLng)  = Math.toDegrees(atan2(secondCoord.latitude - firstCoord.latitude, secondCoord.longitude - firstCoord.longitude))
 
     override fun onMapReady(p0: GoogleMap) {
 
